@@ -715,39 +715,40 @@ export async function getUnifiedModelsResponse(
     // receive token metadata before the first request instead of a bare entry. If the
     // combo cannot be materialized (e.g. no eligible connections yet) the minimal
     // #4164 entry is emitted instead, so the id is never dropped.
-    // #4235 Phase B: also advertise the curated `auto/<category>[:<tier>]` combos.
-    for (const autoId of [...Object.keys(AUTO_TEMPLATE_VARIANTS), ...AUTO_SUFFIX_VARIANTS]) {
-      if (blockedProviders.has("auto") || listedIds.has(autoId)) continue; // #5192
-      listedIds.add(autoId);
-      const baseAutoEntry = {
-        id: autoId,
-        object: "model",
-        created: timestamp,
-        owned_by: "combo",
-        permission: [],
-        root: autoId,
-        parent: null,
-      };
-      try {
-        const suffix = autoId.replace(/^auto\/?/, "");
-        const virtualCombo = await createBuiltinAutoCombo(autoId, suffix);
-        const contextLength = virtualCombo.advertisedContextLength || 128000;
-        const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
-        models.push({
-          ...baseAutoEntry,
-          context_length: contextLength,
-          max_input_tokens: contextLength,
-          max_output_tokens: maxOutputTokens,
-          capabilities: {
-            tool_calling: true,
-            reasoning: true,
-            thinking: true,
-            temperature: true,
-          },
-        });
-      } catch (err) {
-        console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
-        models.push(baseAutoEntry);
+    if (settings?.autoRoutingEnabled !== false) {
+      for (const autoId of [...Object.keys(AUTO_TEMPLATE_VARIANTS), ...AUTO_SUFFIX_VARIANTS]) {
+        if (blockedProviders.has("auto") || listedIds.has(autoId)) continue; // #5192
+        listedIds.add(autoId);
+        const baseAutoEntry = {
+          id: autoId,
+          object: "model",
+          created: timestamp,
+          owned_by: "combo",
+          permission: [],
+          root: autoId,
+          parent: null,
+        };
+        try {
+          const suffix = autoId.replace(/^auto\/?/, "");
+          const virtualCombo = await createBuiltinAutoCombo(autoId, suffix);
+          const contextLength = virtualCombo.advertisedContextLength || 128000;
+          const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
+          models.push({
+            ...baseAutoEntry,
+            context_length: contextLength,
+            max_input_tokens: contextLength,
+            max_output_tokens: maxOutputTokens,
+            capabilities: {
+              tool_calling: true,
+              reasoning: true,
+              thinking: true,
+              temperature: true,
+            },
+          });
+        } catch (err) {
+          console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
+          models.push(baseAutoEntry);
+        }
       }
     }
 
